@@ -1,0 +1,50 @@
+Sub Redimensionar_Imagens()
+On Error Resume Next
+
+Dim LARG, ALT, PERC, ROT As Integer
+Dim INSH As InlineShape
+Dim SH As Shape
+
+LARG = InputBox("Digite o tamanho da largura [cm]" & vbCrLf & vbCrLf & "Largura da página = " & Round((ActiveDocument.PageSetup.PageWidth - ActiveDocument.PageSetup.LeftMargin - ActiveDocument.PageSetup.RightMargin) / 28.34646, 0), "Definir largura das imagens", 7)
+'1'ALT = InputBox("Digite o tamanho da altura [cm]" & vbCrLf & vbCrLf & "Largura da página = " & Round((ActiveDocument.PageSetup.PageHEIGHT - ActiveDocument.PageSetup.TOPMargin - ActiveDocument.PageSetup.BOTTOMMargin) / 28.34646, 0), "Definir altura das imagens", 7)
+'2'PERC = INPUTBOX("Digite o fator de redimensionamento [%]", "Definir factor de dimensionamento", 40)
+'3'ROT = INPUTBOX("Digite o ângulo de rotação [º]", "Definir ângulo de rotação", 90)
+
+For Each INSH In ActiveDocument.InlineShapes
+    With INSH
+        'CENTÍMETROS * 28.34646 = PONTOS
+        .Width = LARG * 28.34646
+        '1'.Height = ALT * 28.34646
+        '2'.ScaleWidth factor:=(PERC / 100), RelativeToOriginalSize:=msoCTrue
+        '2'.ScaleHeight factor:=(PERC / 100), RelativeToOriginalSize:=msoCTrue
+        '3'.Rotation = ROT
+        .Line.Weight = 3
+        With .Shadow
+            .Transparency = 0.6
+            .Size = 100
+            .Blur = 4
+            .Type = msoShadow21
+            .OffsetX = 3
+        End With
+    End With
+Next INSH
+
+For Each SH In ActiveDocument.Shapes
+    With SH
+        .Width = LARG * 28.34646
+        '1'.Height = ALT * 28.34646
+        '2'.ScaleHeight factor:=(PERC / 100), RelativeToOriginalSize:=msoCTrue
+        '2'.ScaleWidth factor:=(PERC / 100), RelativeToOriginalSize:=msoCTrue
+        '3'.Rotation = ROT
+        .Line.Weight = 3
+        With .Shadow
+            .Transparency = 0.6
+            .Size = 100
+            .Blur = 4
+            .Type = msoShadow21
+            .OffsetX = 3
+        End With
+    End With
+Next SH
+
+End Sub
