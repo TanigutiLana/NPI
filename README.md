@@ -17,3 +17,4 @@ A versão atual executa:
 
 ### Renomendo extensões ###
 `RENAME.py` é um script em python usado para renomear as extensões de arquivos presentes dentro de uma pasta.
+`RENAME.ps1` é um script em pwershell usado para renomear as extensões de arquivos presentes dentro de uma pasta.
