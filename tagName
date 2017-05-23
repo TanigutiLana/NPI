@@ -1,0 +1,12 @@
+#!/bin/bash
+
+function tagName() {
+  echo "Rename:"
+  cd "$1" || exit
+  for f in *.pdf
+    do
+      mv "${f}" "${f%.*} $2.pdf"
+      echo "${f} -> ${f%.*} $2.pdf"
+    done
+}
+renome "$1" $2
