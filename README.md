@@ -1,6 +1,6 @@
 NPI
 ====
-Version: 0.0.2
+Version: 0.0.3
 
 ___
 **NPI** é uma biblioteca de ferramentas para solução de problemas genéricos.
@@ -17,4 +17,5 @@ A versão atual executa:
 
 ### Renomendo extensões ###
 `RENAME.py` é um script em python usado para renomear as extensões de arquivos presentes dentro de uma pasta.
-`RENAME.ps1` é um script em pwershell usado para renomear as extensões de arquivos presentes dentro de uma pasta.
+`RENAME.ps1` é um script em powershell usado para renomear as extensões de arquivos presentes dentro de uma pasta.
+`tagName`  é uma função em linux shell que adiciona um tag ao nome de arquivos em pdf. O primeiro argumento é o _caminho_ do diretório que contem os arquivos e o segundo é o _rótulo_.
