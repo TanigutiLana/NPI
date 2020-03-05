@@ -1,0 +1,344 @@
+Sub UFED_WHATSAPP()
+On Error Resume Next
+
+'APAGA TODO CONTEÚDO DO DOCUMENTO
+For X = 1 To ThisDocument.Tables.Count
+    ThisDocument.Tables(X).Delete
+Next X
+ThisDocument.StoryRanges(wdMainTextStory).Delete
+                          
+Dim XDOC As Object
+Set XDOC = Nothing
+Set LISTAS = Nothing
+Set CONVERSA = Nothing
+Set MSGS = Nothing
+
+'ENTRADA DO ENDEREÇO ONDE O RELATÓRIO EM XML SE ENCONTRA
+ENDERECO = InputBox("DIGITE O ENDEREÇO DA PASTA ONDE O ARQUIVO XML ESTÁ", "ENDEREÇO DO ARQUIVO XML")
+
+'ENTRADA DO ENDEREÇO ONDE OS ÍCONES DOS ANEXOS DE ÁUDIO E VÍDEO SE ENCONTRAM
+ENDERECO_ANEXOS = InputBox("DIGITE O ENDEREÇO DA PASTA ONDE OS ÍCONES QUE APARECERÃO EM CADA ANEXO ESTÃO. LEMBRANDO QUE ESTES DEVEM ESTAR NOMEADOS COMO AUDIO.PNG E VIDEO.PNG", "ENDEREÇO DOS ÍCONES DE AUDIO E VIDEO")
+
+Set XDOC = CreateObject("MSXML.DOMDOCUMENT")
+XDOC.async = False
+XDOC.validateOnParse = False
+
+'CONSIDERA QUE O NOME DO ARQUIVO XML É "RELATÓRIO.XML"
+If XDOC.Load(ENDERECO & "\Relatório.xml") Then
+    Set Root = XDOC.DocumentElement
+    TEMP_TABLE = 0    
+    Set LISTAS = Root.SelectNodes("//project/decodedData/modelType[@type='Chat']/*")    
+    
+    'CRIA O TÍTULO NO DOCUMENTO (SEÇÃO "BATE-PAPOS")
+    ThisDocument.Paragraphs.Last.Range.Select
+    ThisDocument.Tables.Add Range:=Selection.Range, NUMROWS:=1, NUMCOLUMNS:=2, DefaultTableBehavior:=wdWord8TableBehavior
+    TEMP_TABLE = TEMP_TABLE + 1
+    With ThisDocument.Tables(TEMP_TABLE)
+        .Cell(1, 1).Range.Text = "Bate-Papos"
+        .Range.Font.Name = "Arial"
+        .Range.Font.Size = 11
+        .Columns(1).Width = CentimetersToPoints(2.5)
+        .Cell(1, 2).Range.Text = "(" & LISTAS.Length & ")"
+        .Columns(2).Width = CentimetersToPoints(13.25)
+        .Borders.Enable = True
+        .Borders.InsideLineStyle = False
+        .Borders(wdBorderLeft).LineStyle = wdLineStyleNone
+        .Borders(wdBorderTop).LineStyle = wdLineStyleNone
+        .Borders(wdBorderRight).LineStyle = wdLineStyleNone
+        .Borders(wdBorderBottom).Color = RGB(0, 112, 192)
+        .Borders(wdBorderBottom).LineWidth = wdLineWidth300pt
+    End With
+    ThisDocument.Paragraphs(ThisDocument.Paragraphs.Count).Range.Text = vbCrLf
+    ThisDocument.Range.ParagraphFormat.SpaceAfter = 0
+    
+    TEMP_CONV = 1
+    Do
+        ThisDocument.Tables.Add Range:=ThisDocument.Paragraphs.Last.Range, NUMROWS:=3, NUMCOLUMNS:=3, DefaultTableBehavior:=wdWord8TableBehavior
+        TEMP_TABLE = TEMP_TABLE + 1
+        Set CONVERSA = Root.SelectSingleNode("//project/decodedData/modelType[@type='Chat']")
+
+        'CRIA ESTRUTURA DA TABELA DE CADA CONVERSA
+        With ThisDocument.Tables(TEMP_TABLE)
+            .Columns(1).Width = CentimetersToPoints(7)
+            .Columns(2).Width = CentimetersToPoints(7)
+            .Columns(3).Width = CentimetersToPoints(1.75)
+            .Cell(1, 1).Range.Text = "CONVERSA #" & TEMP_CONV
+            .Cell(1, 1).Range.Font.Bold = True
+            .Borders.Enable = True
+            .Borders.OutsideColorIndex = wdGray50
+            .Borders.InsideColorIndex = wdGray50
+            .Rows(1).Shading.BackgroundPatternColor = wdColorGray20
+            .Rows(1).HeadingFormat = True
+            TEMP_TABLE_BP = 0
+        
+            'PREENCHE INFORMAÇÕES DOS PARTICIPANTES DA CONVERSA
+            ThisDocument.Tables.Add Range:=ThisDocument.Tables(TEMP_TABLE).Cell(2, 1).Range, NUMROWS:=1, NUMCOLUMNS:=1, DefaultTableBehavior:=wdWord8TableBehavior
+            TEMP_TABLE_BP = TEMP_TABLE_BP + 1
+            .Tables(TEMP_TABLE_BP).Cell(1, 1).Range.Text = "Participantes:"
+            .Tables(TEMP_TABLE_BP).Cell(1, 1).Range.Font.Bold = True
+            Set PARTICIPANTES = Root.SelectNodes("//project/decodedData/modelType[@type='Chat']/model[" & TEMP_CONV - 1 & "]/multiModelField[@name='Participants']/*")
+            Set PART = Root.SelectSingleNode("//project/decodedData/modelType[@type='Chat']/model[" & TEMP_CONV - 1 & "]/multiModelField[@name='Participants']")
+            CONT_LINHA = 2
+            TEMP_PARTIC = ""
+            CONT_P = 0
+            Do Until CONT_P >= PARTICIPANTES.Length
+                If CONT_P > 0 Then
+                    .Tables(TEMP_TABLE_BP).Rows.Add
+                    CONT_LINHA = CONT_LINHA + 1
+                    .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Text = "***"
+                End If
+                If PART.ChildNodes(CONT_P).ChildNodes(2).ChildNodes(0).tagName = "empty" Then
+                    '.Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Text = "-"
+                    'CONT_LINHA = CONT_LINHA + 1
+                Else
+                    .Tables(TEMP_TABLE_BP).Rows.Add
+                    CONT_LINHA = CONT_LINHA + 1
+                    TEMP_PARTIC = PART.ChildNodes(CONT_P).ChildNodes(2).ChildNodes(0).ChildNodes(0).Text
+                    .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Text = TEMP_PARTIC
+                    .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Font.Bold = False
+                    CONT_LINHA = CONT_LINHA + 1
+                End If
+                If PART.ChildNodes(CONT_P).ChildNodes(5).ChildNodes(0).tagName = "empty" Or PART.ChildNodes(CONT_P).ChildNodes(5).ChildNodes(0).ChildNodes(0).Text = TEMP_PARTIC Then
+                    '.Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Text = "-"
+                    'CONT_LINHA = CONT_LINHA + 1
+                Else
+                    .Tables(TEMP_TABLE_BP).Rows.Add
+                    .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Text = PART.ChildNodes(CONT_P).ChildNodes(5).ChildNodes(0).ChildNodes(0).Text
+                    .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Font.Bold = False
+                    CONT_LINHA = CONT_LINHA + 1
+                End If
+                CONT_P = CONT_P + 1
+            Loop
+            'PREENCHE DATAS E HORAS DE INÍCIO E ÚLTIMA ATIVIDADE
+            ThisDocument.Tables.Add Range:=ThisDocument.Tables(TEMP_TABLE).Cell(2, 2).Range, NUMROWS:=1, NUMCOLUMNS:=1, DefaultTableBehavior:=wdWord8TableBehavior
+            TEMP_TABLE_BP = TEMP_TABLE_BP + 1
+            CONT_LINHA = 1
+            .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Text = "Data - Hora de início:"
+            .Tables(TEMP_TABLE_BP).Rows.Add
+            .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Font.Bold = True
+            CONT_LINHA = CONT_LINHA + 1
+            .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Font.Bold = False
+            If CONVERSA.ChildNodes(TEMP_CONV - 1).ChildNodes(5).ChildNodes(0).tagName = "empty" Then
+                .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Text = "-"
+            Else
+                .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Text = Mid(CONVERSA.ChildNodes(TEMP_CONV - 1).ChildNodes(5).ChildNodes(0).Text, 9, 2) & "/" & Mid(CONVERSA.ChildNodes(TEMP_CONV - 1).ChildNodes(5).ChildNodes(0).Text, 6, 2) & "/" & Left(CONVERSA.ChildNodes(TEMP_CONV - 1).ChildNodes(5).ChildNodes(0).Text, 4) & " - " & Mid(CONVERSA.ChildNodes(TEMP_CONV - 1).ChildNodes(5).ChildNodes(0).Text, 12, 8) & " (UTC" & Right(CONVERSA.ChildNodes(TEMP_CONV - 1).ChildNodes(5).ChildNodes(0).Text, 6) & ")"
+            End If
+            .Tables(TEMP_TABLE_BP).Rows.Add
+            CONT_LINHA = CONT_LINHA + 1
+            .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Text = "Data - Hora da última atividade:"
+            .Tables(TEMP_TABLE_BP).Rows.Add
+            .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Font.Bold = True
+            CONT_LINHA = CONT_LINHA + 1
+            .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Font.Bold = False
+            If CONVERSA.ChildNodes(TEMP_CONV - 1).ChildNodes(6).ChildNodes(0).tagName = "empty" Then
+                .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Text = "-"
+            Else
+                .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Text = Mid(CONVERSA.ChildNodes(TEMP_CONV - 1).ChildNodes(6).ChildNodes(0).Text, 9, 2) & "/" & Mid(CONVERSA.ChildNodes(TEMP_CONV - 1).ChildNodes(6).ChildNodes(0).Text, 6, 2) & "/" & Left(CONVERSA.ChildNodes(TEMP_CONV - 1).ChildNodes(6).ChildNodes(0).Text, 4) & " - " & Mid(CONVERSA.ChildNodes(TEMP_CONV - 1).ChildNodes(6).ChildNodes(0).Text, 12, 8) & " (UTC" & Right(CONVERSA.ChildNodes(TEMP_CONV - 1).ChildNodes(6).ChildNodes(0).Text, 6) & ")"
+            End If
+            .Tables(TEMP_TABLE_BP).Borders.Enable = False
+            .Tables(TEMP_TABLE_BP).Columns.Width = CentimetersToPoints(7)
+            
+            'PREENCHE DADOS DO APLICATIVO DE ORIGEM
+            .Tables(TEMP_TABLE_BP).Rows.Add
+            CONT_LINHA = CONT_LINHA + 1
+            .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Text = "Origem:"
+            .Tables(TEMP_TABLE_BP).Rows.Add
+            .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Font.Bold = True
+            CONT_LINHA = CONT_LINHA + 1
+            .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Font.Bold = False
+            .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Text = CONVERSA.ChildNodes(TEMP_CONV - 1).ChildNodes(1).ChildNodes(0).Text
+            .Tables(TEMP_TABLE_BP).Borders.Enable = False
+            .Tables(TEMP_TABLE_BP).Columns.Width = CentimetersToPoints(7)
+                           
+            'PREENCHE O NOME DO GRUPO
+            If CONVERSA.ChildNodes(TEMP_CONV - 1).ChildNodes(3).ChildNodes(0).tagName = "value" Then
+                If Left(CONVERSA.ChildNodes(TEMP_CONV - 1).ChildNodes(3).ChildNodes(0).ChildNodes(0).Text, 5) = "Group" Then
+                    .Tables(TEMP_TABLE_BP).Rows.Add
+                    CONT_LINHA = CONT_LINHA + 1
+                    .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Text = "Nome do grupo:"
+                    .Tables(TEMP_TABLE_BP).Rows.Add
+                    .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Font.Bold = True
+                    CONT_LINHA = CONT_LINHA + 1
+                    .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Font.Bold = False
+                    .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Text = Mid(CONVERSA.ChildNodes(TEMP_CONV - 1).ChildNodes(3).ChildNodes(0).ChildNodes(0).Text, 8, Len(CONVERSA.ChildNodes(TEMP_CONV - 1).ChildNodes(3).ChildNodes(0).ChildNodes(0).Text) - 7)
+                End If
+            End If
+                        
+            'PREENCHE SE A CONVERSA FOI EXCLUÍDA
+            ThisDocument.Tables.Add Range:=ThisDocument.Tables(TEMP_TABLE).Cell(2, 3).Range, NUMROWS:=1, NUMCOLUMNS:=1, DefaultTableBehavior:=wdWord8TableBehavior
+            TEMP_TABLE_BP = TEMP_TABLE_BP + 1
+            .Tables(TEMP_TABLE_BP).Cell(1, 1).Range.Text = "Excluída:"
+            .Tables(TEMP_TABLE_BP).Rows.Add
+            .Tables(TEMP_TABLE_BP).Cell(1, 1).Range.Font.Bold = True
+            .Tables(TEMP_TABLE_BP).Cell(2, 1).Range.Font.Bold = False
+            If CONVERSA.ChildNodes(TEMP_CONV - 1).Attributes.GetNamedItem("deleted_state").Text = "Deleted" Then
+                .Tables(TEMP_TABLE_BP).Cell(2, 1).Range.Text = "SIM"
+                .Tables(TEMP_TABLE_BP).Cell(2, 1).Range.Font.ColorIndex = wdRed
+            Else
+                .Tables(TEMP_TABLE_BP).Cell(2, 1).Range.Text = "NÃO"
+            End If
+            .Tables(TEMP_TABLE_BP).Cell(2, 3).Range.ParagraphFormat.Alignment = wdAlignParagraphCenter
+            .Tables(TEMP_TABLE_BP).Borders.Enable = False
+            .Tables(TEMP_TABLE_BP).Columns.Width = CentimetersToPoints(1.75)
+            
+            'PREENCHE AS MENSAGENS RELACIONADAS A RESPECTIVA CONVERSA
+            ThisDocument.Tables.Add Range:=ThisDocument.Tables(TEMP_TABLE).Cell(3, 1).Range, NUMROWS:=1, NUMCOLUMNS:=2, DefaultTableBehavior:=wdWord9TableBehavior, AutoFitBehavior:=wdAutoFitWindow
+            TEMP_TABLE_BP = TEMP_TABLE_BP + 1
+                                                       
+            y = 0
+            CONT_LINHA = 1
+            CONT_COR = 1
+            Z = Root.SelectNodes("//project/decodedData/modelType[@type='Chat']/model[" & TEMP_CONV - 1 & "]/multiModelField[@name='Messages']/*").Length
+            Do
+                TEMP_MSG = ""
+                CONT_MSG = 0
+                Set MSGS = Root.SelectSingleNode("//project/decodedData/modelType[@type='Chat']/model[" & TEMP_CONV - 1 & "]/multiModelField[@name='Messages']/model[" & y & "]")
+                
+                If MSGS.ChildNodes(7).ChildNodes(0).tagName = "value" Then
+                    TEMP_MSG = Mid(MSGS.ChildNodes(7).ChildNodes(0).Text, 9, 2) & "/" & Mid(MSGS.ChildNodes(7).ChildNodes(0).Text, 6, 2) & "/" & Left(MSGS.ChildNodes(7).ChildNodes(0).Text, 4) & " - " & Mid(MSGS.ChildNodes(7).ChildNodes(0).Text, 12, 8) & " (UTC" & Right(MSGS.ChildNodes(7).ChildNodes(0).Text, 6) & ")"
+                    CONT_MSG = 1
+                End If
+                If MSGS.ChildNodes(2).ChildNodes.Count > 0 Then
+                    If MSGS.ChildNodes(2).ChildNodes(0).ChildNodes(2).ChildNodes(0).tagName = "value" Then
+                        If CONT_MSG = 0 Then
+                            TEMP_MSG = "De: " & MSGS.ChildNodes(2).ChildNodes(0).ChildNodes(2).ChildNodes(0).Text
+                            If MSGS.ChildNodes(2).ChildNodes(0).ChildNodes(5).ChildNodes(0).tagName = "value" Then
+                                TEMP_MSG = TEMP_MSG & " - " & MSGS.ChildNodes(2).ChildNodes(0).ChildNodes(5).ChildNodes(0).Text
+                                CONT_MSG = 1
+                            End If
+                        Else
+                            TEMP_MSG = TEMP_MSG & "  De: " & MSGS.ChildNodes(2).ChildNodes(0).ChildNodes(2).ChildNodes(0).Text
+                            If MSGS.ChildNodes(2).ChildNodes(0).ChildNodes(5).ChildNodes(0).tagName = "value" Then
+                                TEMP_MSG = TEMP_MSG & " - " & MSGS.ChildNodes(2).ChildNodes(0).ChildNodes(5).ChildNodes(0).Text
+                                CONT_MSG = 1
+                            End If
+                            CONT_MSG = 1
+                        End If
+'                    Else
+'                        If MSGS.ChildNodes(3).ChildNodes(0).ChildNodes(2).ChildNodes(0).tagName = "value" Then
+'                            If CONT_MSG = 0 Then
+'                                TEMP_MSG = "Para: " & MSGS.ChildNodes(2).ChildNodes(0).ChildNodes(1).ChildNodes(0).Text
+'                                If MSGS.ChildNodes(2).ChildNodes(0).ChildNodes(4).ChildNodes(0).tagName = "value" Then
+'                                    TEMP_MSG = TEMP_MSG & " - " & MSGS.ChildNodes(2).ChildNodes(0).ChildNodes(4).ChildNodes(0).Text
+'                                    CONT_MSG = 1
+'                                End If
+'                            Else
+'                                TEMP_MSG = TEMP_MSG & "  Para: " & MSGS.ChildNodes(2).ChildNodes(0).ChildNodes(1).ChildNodes(0).Text
+'                                If MSGS.ChildNodes(2).ChildNodes(0).ChildNodes(4).ChildNodes(0).tagName = "value" Then
+'                                    TEMP_MSG = TEMP_MSG & " - " & MSGS.ChildNodes(2).ChildNodes(0).ChildNodes(4).ChildNodes(0).Text
+'                                    CONT_MSG = 1
+'                                End If
+'                                CONT_MSG = 1
+'                            End If
+'                        End If
+                    End If
+                End If
+                If MSGS.ChildNodes(17).ChildNodes(0).tagName = "value" Then
+                    If CONT_MSG = 0 Then
+                        If MSGS.ChildNodes(17).ChildNodes(0).Text = "Mobile" Then
+                            TEMP_MSG = "(Enviado de: Celular"
+                            If MSGS.Attributes.GetNamedItem("deleted_state").Text = "Deleted" Then
+                                TEMP_MSG = TEMP_MSG & "-Apagada"
+                            End If
+                            TEMP_MSG = TEMP_MSG & ")"
+                        End If
+                        CONT_MSG = 1
+                    Else
+                        If MSGS.ChildNodes(17).ChildNodes(0).Text = "Mobile" Then
+                            TEMP_MSG = TEMP_MSG & " (Enviado de: Celular"
+                            If MSGS.Attributes.GetNamedItem("deleted_state").Text = "Deleted" Then
+                                TEMP_MSG = TEMP_MSG & "-Apagada"
+                            End If
+                            TEMP_MSG = TEMP_MSG & ")"
+                        End If
+                    End If
+                End If
+                .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Text = TEMP_MSG
+                .Tables(TEMP_TABLE_BP).Rows.Add
+                .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Merge MergeTo:=.Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 2)
+                .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Font.Bold = False
+                CONT_LINHA = CONT_LINHA + 1
+                
+                TEMP_MSG = ""
+                If MSGS.ChildNodes(5).ChildNodes(0).tagName = "value" Then
+                    .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.Text = MSGS.ChildNodes(5).ChildNodes(0).Text
+                    .Tables(TEMP_TABLE_BP).Rows.Add
+                    .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Merge MergeTo:=.Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 2)
+                    CONT_LINHA = CONT_LINHA + 1
+                End If
+                
+                'PREENCHE OS ANEXOS
+                TOTAL_ANEXOS1 = Root.SelectNodes("//project/decodedData/modelType[@type='Chat']/model[" & TEMP_CONV - 1 & "]/multiModelField[@name='Messages']/model[" & y & "]/modelField[@name='Attachment']/*").Length
+                TOTAL_ANEXOS2 = Root.SelectNodes("//project/decodedData/modelType[@type='Chat']/model[" & TEMP_CONV - 1 & "]/multiModelField[@name='Messages']/model[" & y & "]/multiModelField[@name='Attachments']/*").Length
+                CONT_A = 0
+                CONT_ANEXOS1 = 0
+                CONT_ANEXOS2 = 0
+                Do
+                    If MSGS.ChildNodes(10).ChildNodes(CONT_A).tagName <> "empty" Then
+                        CONT_ANEXOS1 = CONT_ANEXOS1 + 1
+                    End If
+                    CONT_A = CONT_A + 1
+                Loop Until CONT_A >= TOTAL_ANEXOS1
+                CONT_A = 0
+                Do
+                    If TOTAL_ANEXOS2 > 0 Then
+                        If Left(MSGS.ChildNodes(11).ChildNodes(CONT_A).ChildNodes(3).ChildNodes(0).ChildNodes(0).Text, 5) = "audio" Then
+                            .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.InlineShapes.AddPicture (ENDERECO_ANEXOS & "\AUDIO.PNG")
+                        End If
+                        If Left(MSGS.ChildNodes(11).ChildNodes(CONT_A).ChildNodes(3).ChildNodes(0).ChildNodes(0).Text, 5) = "video" Then
+                            .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.InlineShapes.AddPicture (ENDERECO_ANEXOS & "\VIDEO.PNG")
+                        End If
+                        If Left(MSGS.ChildNodes(11).ChildNodes(CONT_A).ChildNodes(3).ChildNodes(0).ChildNodes(0).Text, 5) = "image" Then
+                            .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 1).Range.InlineShapes.AddPicture (ENDERECO & "\" & MSGS.ChildNodes(11).ChildNodes(CONT_A).ChildNodes(9).ChildNodes(0).ChildNodes(0).Text)
+                        End If
+                        .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 2).Range.Text = MSGS.ChildNodes(11).ChildNodes(CONT_A).ChildNodes(2).ChildNodes(0).ChildNodes(0).Text
+                        .Tables(TEMP_TABLE_BP).Cell(CONT_LINHA, 2).VerticalAlignment = wdCellAlignVerticalCenter
+                        .Tables(TEMP_TABLE_BP).Rows.Add
+                        CONT_LINHA = CONT_LINHA + 1
+                    End If
+                    CONT_A = CONT_A + 1
+                Loop Until CONT_A >= TOTAL_ANEXOS2
+                                        
+                If CONT_COR = 1 Then
+                    .Tables(TEMP_TABLE_BP).Rows(CONT_LINHA - 1).Shading.BackgroundPatternColor = wdColorGray15
+                    .Tables(TEMP_TABLE_BP).Rows(CONT_LINHA - 2).Shading.BackgroundPatternColor = wdColorGray15
+                    CONT_COR = 0
+                Else
+                    CONT_COR = 1
+                End If
+                                                        
+                If y + 1 >= Z Then
+                    GoTo SAIDA1
+                End If
+                
+                If CONT_A = 0 Then
+                    .Tables(TEMP_TABLE_BP).Rows.Add
+                End If
+                y = y + 1
+                
+                Set MSGS = Nothing
+                Set PARTICIPANTES = Nothing
+                Set PART = Nothing
+                
+            Loop Until y = Z
+SAIDA1:
+            'FORMATAÇÃO FINAL (IMPORTANTE QUE NÃO SE ALTERE A FONTE DEVIDO A COMPATIBILIDADE COM OS EMOJIS
+            .Range.Font.Name = "Segoe UI Emoji"
+            .Range.Font.Size = 9
+            .Cell(1, 1).Merge MergeTo:=.Cell(1, 3)
+            .Cell(3, 1).Merge MergeTo:=.Cell(3, 3)
+            .Tables(TEMP_TABLE_BP).Columns(1).Width = CentimetersToPoints(8)
+            .Tables(TEMP_TABLE_BP).Range.ParagraphFormat.Alignment = wdAlignParagraphJustify
+            .Tables(TEMP_TABLE_BP).Borders.Enable = False
+        End With
+        
+        ThisDocument.Paragraphs.Last.Range.Text = vbCrLf
+        TEMP_CONV = TEMP_CONV + 1
+        Set CONVERSA = Nothing
+        
+    Loop Until TEMP_CONV >= LISTAS.Length + 1
+Else
+    MsgBox "ERRO NO CARREGAMENTO DO ARQUIVO XML."
+End If
+
+End Sub
