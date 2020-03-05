@@ -1,7 +1,7 @@
 Sub UFED_WHATSAPP()
 On Error Resume Next
 
-'APAGA TODO CONTEÚDO DO DOCUMENTO
+'APAGA CONTEÚDO DO DOCUMENTO
 For X = 1 To ThisDocument.Tables.Count
     ThisDocument.Tables(X).Delete
 Next X
